@@ -1,0 +1,138 @@
+﻿<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="UTF-8">
+  <title>ClearQueue - Scoring Engine Unit Tests</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 30px;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: #1e293b;
+      border-radius: 12px;
+      padding: 24px;
+      border: 1px solid #334155;
+    }
+    h1 {
+      margin-top: 0;
+      color: #38bdf8;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .test-item {
+      padding: 12px 16px;
+      margin-bottom: 8px;
+      border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #0f172a;
+      border: 1px solid #334155;
+    }
+    .passed {
+      border-left: 4px solid #10b981;
+    }
+    .failed {
+      border-left: 4px solid #ef4444;
+    }
+    .badge {
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+    }
+    .badge-pass {
+      background: rgba(16, 185, 129, 0.2);
+      color: #34d399;
+    }
+    .badge-fail {
+      background: rgba(239, 68, 68, 0.2);
+      color: #f87171;
+    }
+    .summary {
+      margin-top: 20px;
+      padding-top: 15px;
+      border-top: 1px solid #334155;
+      font-weight: 600;
+      font-size: 1.1rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>ΓÜí ClearQueue Test Runner</h1>
+    <p>Automated validation of deterministic medical attention scoring rubric.</p>
+    <div id="results"><div class="test-item passed">
+        <div>
+          <div style="font-weight:600">Critical patient achieves score &gt;= 60 and Immediate band</div>
+          <div style="font-size:0.85rem;color:#94a3b8;margin-top:2px;">Calculated score: 124, band: immediate</div>
+        </div>
+        <span class="badge badge-pass">PASSED</span>
+      </div><div class="test-item passed">
+        <div>
+          <div style="font-weight:600">Score breakdown contains all 7 factors itemized</div>
+          <div style="font-size:0.85rem;color:#94a3b8;margin-top:2px;">Breakdown items: 7</div>
+        </div>
+        <span class="badge badge-pass">PASSED</span>
+      </div><div class="test-item passed">
+        <div>
+          <div style="font-weight:600">Case with missing vitals assigned to needs_assessment band</div>
+          <div style="font-size:0.85rem;color:#94a3b8;margin-top:2px;">Band: needs_assessment, needsAssessment: true</div>
+        </div>
+        <span class="badge badge-pass">PASSED</span>
+      </div><div class="test-item passed">
+        <div>
+          <div style="font-weight:600">Red-flag symptoms are capped at 50 points (2 x 25)</div>
+          <div style="font-size:0.85rem;color:#94a3b8;margin-top:2px;">Red-flag points accumulated: 50</div>
+        </div>
+        <span class="badge badge-pass">PASSED</span>
+      </div><div class="test-item passed">
+        <div>
+          <div style="font-weight:600">Wait time escalator awards exactly +10 points for 50 minutes</div>
+          <div style="font-size:0.85rem;color:#94a3b8;margin-top:2px;">Escalator points: 10</div>
+        </div>
+        <span class="badge badge-pass">PASSED</span>
+      </div><div class="test-item passed">
+        <div>
+          <div style="font-weight:600">Manual clinician override assigns immediate band despite low score</div>
+          <div style="font-size:0.85rem;color:#94a3b8;margin-top:2px;">Overridden: true, Band: immediate</div>
+        </div>
+        <span class="badge badge-pass">PASSED</span>
+      </div></div>
+    <div id="summary" class="summary">Tests completed: 6/6 Passed (100% Succeeded Γ£à)</div>
+  </div>
+
+  <script type="module">
+    import { runAllTests } from './scoring.test.js';
+
+    const results = runAllTests();
+    const container = document.getElementById('results');
+    const summary = document.getElementById('summary');
+    container.innerHTML = '';
+
+    let passedCount = 0;
+
+    results.forEach(res => {
+      if (res.passed) passedCount++;
+      const div = document.createElement('div');
+      div.className = `test-item ${res.passed ? 'passed' : 'failed'}`;
+      div.innerHTML = `
+        <div>
+          <div style="font-weight:600">${res.name}</div>
+          <div style="font-size:0.85rem;color:#94a3b8;margin-top:2px;">${res.details}</div>
+        </div>
+        <span class="badge ${res.passed ? 'badge-pass' : 'badge-fail'}">${res.passed ? 'PASSED' : 'FAILED'}</span>
+      `;
+      container.appendChild(div);
+    });
+
+    summary.innerHTML = `Tests completed: ${passedCount}/${results.length} Passed (${passedCount === results.length ? '100% Succeeded Γ£à' : 'Some Failed Γ¥î'})`;
+  </script>
+
+
+</body></html>
