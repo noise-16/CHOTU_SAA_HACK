@@ -30,7 +30,7 @@ export function renderPatientView(scheduleData, selectedPatientId) {
   return `
     <div class="main-wrapper">
       <!-- Patient Selector Dropdown (Allows demoing patient view for any patient) -->
-      <div style="max-width: 680px; margin: 0 auto; display:flex; justify-content:space-between; align-items:center; background:#ffffff; padding:10px 16px; border-radius:var(--radius-md); border:1px solid var(--border-subtle); box-shadow:var(--shadow-sm);">
+      <div style="max-width: 680px; margin: 0 auto; display:flex; justify-content:space-between; align-items:center; background:var(--bg-surface); padding:10px 16px; border-radius:var(--radius-md); border:1px solid var(--border-subtle); box-shadow:var(--shadow-sm);">
         <label for="patient-select" style="font-size:0.85rem; font-weight:600; color:var(--text-secondary);">
           Viewing Status As:
         </label>

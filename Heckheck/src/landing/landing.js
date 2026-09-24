@@ -4,7 +4,9 @@
  * and direct launch integration with the ClearQueue General OPD triage system.
  */
 
-export function renderLandingPage() {
+export function renderLandingPage(theme = 'dark') {
+  const isDark = theme === 'dark';
+
   return `
     <div class="landing-page-root">
       <!-- 1. TOP HOSPITAL NAVBAR -->
@@ -31,6 +33,15 @@ export function renderLandingPage() {
           </nav>
 
           <div class="landing-nav-actions">
+            <div class="theme-switcher-pill" role="radiogroup" aria-label="Theme Selection">
+              <button class="theme-pill-btn ${!isDark ? 'active' : ''}" data-set-theme="light" title="Switch to Light Theme">
+                ☀️ Light
+              </button>
+              <button class="theme-pill-btn ${isDark ? 'active' : ''}" data-set-theme="dark" title="Switch to Dark Theme">
+                🌙 Dark
+              </button>
+            </div>
+
             <a href="tel:+18005552273" class="emergency-call-pill">
               <span>📞</span> 24/7 Helpline: <strong>(800) 555-CARE</strong>
             </a>
@@ -92,8 +103,19 @@ export function renderLandingPage() {
                 <span class="badge-icon">🧬</span>
                 <div class="badge-content">
                   <strong>3D Interactive Bio-Nexus</strong>
-                  <span>Move mouse to explore medical lattice</span>
+                  <span>Drag or move mouse • Orbiting clinical hubs</span>
                 </div>
+              </div>
+              <div class="three-controls-toolbar">
+                <button class="three-ctrl-btn" id="btn-3d-pulse" type="button" title="Trigger Clinical Shockwave Pulse">
+                  ⚡ Energy Pulse
+                </button>
+                <button class="three-ctrl-btn" id="btn-3d-burst" type="button" title="Accelerate Nanoparticles">
+                  ✨ Particle Burst
+                </button>
+                <button class="three-ctrl-btn" id="btn-3d-reset" type="button" title="Reset Camera Orbit">
+                  🔄 Reset View
+                </button>
               </div>
             </div>
           </div>

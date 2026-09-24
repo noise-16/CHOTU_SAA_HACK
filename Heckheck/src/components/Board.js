@@ -26,11 +26,12 @@ export function renderControlsBar(searchQuery, filterBand, viewMode) {
 
         <select class="filter-select" id="filter-band-select">
           <option value="ALL" ${filterBand === 'ALL' ? 'selected' : ''}>All Priority Bands</option>
-          <option value="immediate" ${filterBand === 'immediate' ? 'selected' : ''}>🔴 Immediate Attention</option>
-          <option value="soon" ${filterBand === 'soon' ? 'selected' : ''}>🟠 Attention Soon</option>
-          <option value="monitor" ${filterBand === 'monitor' ? 'selected' : ''}>🟡 Monitor</option>
-          <option value="stable" ${filterBand === 'stable' ? 'selected' : ''}>🟢 Stable</option>
-          <option value="needs_assessment" ${filterBand === 'needs_assessment' ? 'selected' : ''}>⚪ Needs Assessment</option>
+          <option value="critical" ${filterBand === 'critical' ? 'selected' : ''}>🔴 Critical</option>
+          <option value="high" ${filterBand === 'high' ? 'selected' : ''}>🟠 High</option>
+          <option value="moderate" ${filterBand === 'moderate' ? 'selected' : ''}>🟡 Moderate</option>
+          <option value="routine" ${filterBand === 'routine' ? 'selected' : ''}>🟢 Routine</option>
+          <option value="stable" ${filterBand === 'stable' ? 'selected' : ''}>⚪ Stable / Observation</option>
+          <option value="needs_assessment" ${filterBand === 'needs_assessment' ? 'selected' : ''}>⚠️ Needs Assessment</option>
         </select>
       </div>
 
@@ -72,9 +73,10 @@ export function renderBoard(patients, expandedCardIds = new Set(), viewMode = 'k
  */
 function renderKanbanView(patients, expandedCardIds) {
   const columns = [
-    { id: 'immediate', band: PRIORITY_BANDS.IMMEDIATE, class: 'col-immediate' },
-    { id: 'soon', band: PRIORITY_BANDS.SOON, class: 'col-soon' },
-    { id: 'monitor', band: PRIORITY_BANDS.MONITOR, class: 'col-monitor' },
+    { id: 'critical', band: PRIORITY_BANDS.CRITICAL, class: 'col-critical' },
+    { id: 'high', band: PRIORITY_BANDS.HIGH, class: 'col-high' },
+    { id: 'moderate', band: PRIORITY_BANDS.MODERATE, class: 'col-moderate' },
+    { id: 'routine', band: PRIORITY_BANDS.ROUTINE, class: 'col-routine' },
     { id: 'stable', band: PRIORITY_BANDS.STABLE, class: 'col-stable' },
     { id: 'needs_assessment', band: PRIORITY_BANDS.NEEDS_ASSESSMENT, class: 'col-needs_assessment' }
   ];
@@ -89,7 +91,7 @@ function renderKanbanView(patients, expandedCardIds) {
               <header class="column-header">
                 <div class="column-title-group">
                   <span class="column-icon">${col.band.icon}</span>
-                  <h2 class="column-title">${col.band.shortLabel}</h2>
+                  <h2 class="column-title">${col.band.name}</h2>
                 </div>
                 <span class="column-badge">${colPatients.length}</span>
               </header>
@@ -143,11 +145,11 @@ function renderRankedListView(patients, expandedCardIds) {
               <div class="queue-table-row band-${p.band.id}" data-id="${p.id}">
                 <div class="queue-rank">#${idx + 1}</div>
                 <div>
-                  <div style="font-weight:700; color:#fff;">${p.id}</div>
+                  <div style="font-weight:700; color:var(--text-primary);">${p.id}</div>
                   <div style="font-size:0.8rem; color:var(--text-secondary);">${p.name} (${p.age || '—'})</div>
                 </div>
                 <div>
-                  <div style="font-weight:600; font-size:0.88rem; color:#f1f5f9;">${p.chief_complaint}</div>
+                  <div style="font-weight:600; font-size:0.88rem; color:var(--text-primary);">${p.chief_complaint}</div>
                   <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">
                     ${p.plainLanguageWhy}
                   </div>
@@ -162,8 +164,8 @@ function renderRankedListView(patients, expandedCardIds) {
                   </span>
                 </div>
                 <div>
-                  <span class="column-badge" style="background:${p.band.bgBadge}; color:${p.band.color}; border:1px solid ${p.band.borderColor};">
-                    ${p.band.icon} ${p.band.shortLabel}
+                  <span class="priority-badge band-${p.band.id}">
+                    ${p.band.icon} ${p.band.name}
                   </span>
                 </div>
                 <div style="display:flex; justify-content:flex-end; gap:6px;">

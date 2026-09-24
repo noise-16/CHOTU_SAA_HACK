@@ -1,18 +1,34 @@
 /**
  * DoctorDashboard Component
  * Displays ONLY patients assigned to the active doctor (§11).
- * Features: "Who Should I See Next?" card, doctor-specific queue, schedule timeline, and utilisation metrics.
+ * Features: 3D Patient Bio-Hologram HUD, "Who Should I See Next?" card,
+ * search & filter toolbar, queue wait progress gauges, timeline, and utilisation metrics.
  */
 
 import { OPD_DOCTORS } from '../logic/scheduling.js';
 
-export function renderDoctorDashboard(doctorScheduleData, currentDoctorName) {
-  const { doctorName, doctorRoom, doctorRole, scheduledQueue, nextPatient, timelineSlots, utilisation } = doctorScheduleData;
+export function renderDoctorDashboard(doctorScheduleData, currentDoctorName, filterQuery = '', filterBand = 'all') {
+  const { doctorName, doctorRoom, doctorRole, scheduledQueue: rawQueue, nextPatient, timelineSlots, utilisation } = doctorScheduleData;
+
+  // Apply search query and priority band filtering
+  const q = (filterQuery || '').trim().toLowerCase();
+  const scheduledQueue = rawQueue.filter(p => {
+    const matchesSearch = !q || 
+      p.name.toLowerCase().includes(q) || 
+      p.id.toLowerCase().includes(q) || 
+      (p.chief_complaint && p.chief_complaint.toLowerCase().includes(q)) ||
+      (p.reported_symptoms && p.reported_symptoms.some(s => s.toLowerCase().includes(q)));
+
+    const matchesBand = filterBand === 'all' || 
+      (filterBand === 'overdue' ? p.waitStatus?.isOverdue : p.band.id === filterBand);
+
+    return matchesSearch && matchesBand;
+  });
 
   return `
     <div class="main-wrapper">
       <!-- Doctor Selection Switcher Header (§11) -->
-      <div style="background:#ffffff; border:1px solid var(--border-subtle); border-radius:var(--radius-lg); padding:16px 20px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px; box-shadow:var(--shadow-sm);">
+      <div style="background:var(--bg-surface); border:1px solid var(--border-subtle); border-radius:var(--radius-lg); padding:16px 20px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px; box-shadow:var(--shadow-sm);">
         <div>
           <span style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em;">
             Logged-In Clinician Dashboard (§11 Doctor-Specific Access)
@@ -57,7 +73,8 @@ export function renderDoctorDashboard(doctorScheduleData, currentDoctorName) {
             </div>
           </div>
 
-          <div class="next-patient-grid">
+          <div class="next-patient-grid next-patient-with-3d">
+            <!-- Left: Clinical Assessment & Factors -->
             <div class="next-patient-primary">
               <div class="next-patient-name-row">
                 <span class="next-patient-name">${nextPatient.name}</span>
@@ -82,9 +99,26 @@ export function renderDoctorDashboard(doctorScheduleData, currentDoctorName) {
               </div>
             </div>
 
+            <!-- Center: Interactive 3D Patient Bio-Hologram Visualizer -->
+            <div class="next-patient-hologram-box">
+              <div class="hologram-hud-header">
+                <span class="hologram-title">3D BIO-RHYTHM MONITOR</span>
+                <span class="hologram-hr-badge ${nextPatient.band.id === 'critical' ? 'pulse-fast' : ''}">
+                  💓 ${nextPatient.vitals?.heart_rate ? nextPatient.vitals.heart_rate + ' BPM' : 'Vitals In Review'}
+                </span>
+              </div>
+              <div class="hologram-canvas-container" id="doctor-bio-canvas" data-patient-id="${nextPatient.id}"></div>
+              <div class="hologram-telemetry-row">
+                <span>SpO2: <strong>${nextPatient.vitals?.spo2 ? nextPatient.vitals.spo2 + '%' : '—'}</strong></span>
+                <span>BP: <strong>${nextPatient.vitals?.systolic_bp ? nextPatient.vitals.systolic_bp + ' mmHg' : '—'}</strong></span>
+                <span>Score: <strong style="color:var(--brand-primary);">${nextPatient.band.id === 'needs_assessment' ? '?' : nextPatient.score}</strong></span>
+              </div>
+            </div>
+
+            <!-- Right: Clinic Meta & Actions -->
             <div class="next-patient-secondary">
               <div class="next-meta-row">
-                <span class="next-meta-label">Your Consultation Room:</span>
+                <span class="next-meta-label">Consultation Room:</span>
                 <span class="next-meta-val" style="color:var(--brand-primary); font-size:1.15rem;">
                   📍 ${doctorRoom}
                 </span>
@@ -95,7 +129,7 @@ export function renderDoctorDashboard(doctorScheduleData, currentDoctorName) {
               </div>
               <div class="next-meta-row">
                 <span class="next-meta-label">Elapsed Waiting Time:</span>
-                <span class="next-meta-val">${nextPatient.wait_time_minutes} min (Max: ${nextPatient.band.maxWaitMinutes}m)</span>
+                <span class="next-meta-val">${nextPatient.wait_time_minutes}m / Max: ${nextPatient.band.maxWaitMinutes}m</span>
               </div>
               <div class="next-meta-row">
                 <span class="next-meta-label">Wait Limit Status:</span>
@@ -104,7 +138,7 @@ export function renderDoctorDashboard(doctorScheduleData, currentDoctorName) {
                 </span>
               </div>
 
-              <button class="btn btn-primary btn-call-seen" data-id="${nextPatient.id}" style="margin-top:6px; width:100%;">
+              <button class="btn btn-primary btn-call-seen" data-id="${nextPatient.id}" style="margin-top:8px; width:100%;">
                 ✓ Call & Mark Consultation Seen
               </button>
             </div>
@@ -138,38 +172,58 @@ export function renderDoctorDashboard(doctorScheduleData, currentDoctorName) {
           <div class="doctor-stat-card">
             <span class="doctor-stat-label">Patient-Facing Time</span>
             <span class="doctor-stat-val">${utilisation.patientFacingMinutes} <span style="font-size:0.85rem; font-weight:normal;">min</span></span>
-            <span class="doctor-stat-sub">Allocated for your consultations</span>
+            <span class="doctor-stat-sub">Cumulative consultation minutes</span>
+          </div>
+
+          <div class="doctor-stat-card">
+            <span class="doctor-stat-label">Patients Waiting</span>
+            <span class="doctor-stat-val" style="color:var(--brand-primary);">${utilisation.activeWaitingCount}</span>
+            <span class="doctor-stat-sub">Remaining in your queue</span>
           </div>
 
           <div class="doctor-stat-card">
             <span class="doctor-stat-label">Patients Completed</span>
-            <span class="doctor-stat-val" style="color:#15803d;">${utilisation.patientsSeenCount}</span>
-            <span class="doctor-stat-sub">Seen by you today</span>
-          </div>
-
-          <div class="doctor-stat-card">
-            <span class="doctor-stat-label">Your Waiting Queue</span>
-            <span class="doctor-stat-val">${utilisation.activeWaitingCount}</span>
-            <span class="doctor-stat-sub">Assigned to ${doctorRoom}</span>
-          </div>
-
-          <div class="doctor-stat-card">
-            <span class="doctor-stat-label">Available Buffer</span>
-            <span class="doctor-stat-val">${utilisation.idleGapMinutes} <span style="font-size:0.85rem; font-weight:normal;">min</span></span>
-            <span class="doctor-stat-sub">Buffer for urgent walk-ins</span>
+            <span class="doctor-stat-val" style="color:#16a34a;">${utilisation.patientsSeenCount}</span>
+            <span class="doctor-stat-sub">Discharged this session</span>
           </div>
         </div>
       </section>
 
-      <!-- 3. DOCTOR'S QUEUE (Assigned Patients Only) -->
-      <section class="panel-card" aria-label="Doctor Assigned Queue">
-        <div class="panel-header">
-          <h2 class="panel-title">
-            <span>📋</span> ${doctorName}'s Assigned Patient Queue (${scheduledQueue.length} cases)
-          </h2>
-          <span style="font-size:0.8rem; color:var(--text-secondary);">
-            Severity-prioritised • Patients assigned to other doctors are hidden (§11)
-          </span>
+      <!-- 3. DOCTOR'S ASSIGNED PATIENTS QUEUE TABLE -->
+      <section class="panel-card" aria-label="Doctor Queue Table">
+        <div class="panel-header" style="flex-wrap:wrap; gap:12px;">
+          <div>
+            <h3 class="panel-title">
+              <span>📋</span> ${doctorName}'s Waiting Queue (${rawQueue.length} assigned)
+            </h3>
+            <span style="font-size:0.8rem; color:var(--text-muted);">
+              Filtered specifically for ${doctorRoom} • Ordered live by severity score & escalation
+            </span>
+          </div>
+
+          <!-- Instant Search Bar -->
+          <div class="queue-search-wrap">
+            <span class="search-icon">🔍</span>
+            <input 
+              type="text" 
+              class="queue-search-input" 
+              id="doctor-search-input" 
+              placeholder="Search by name, ID, symptoms..." 
+              value="${filterQuery}"
+            />
+            ${filterQuery ? `<button class="search-clear-btn" id="btn-clear-doctor-search">✕</button>` : ''}
+          </div>
+        </div>
+
+        <!-- Filter Chips Toolbar -->
+        <div class="filter-chips-bar">
+          <span style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Filter Tier:</span>
+          <button class="filter-chip ${filterBand === 'all' ? 'active' : ''}" data-band="all">All (${rawQueue.length})</button>
+          <button class="filter-chip ${filterBand === 'critical' ? 'active' : ''}" data-band="critical">🔴 Critical</button>
+          <button class="filter-chip ${filterBand === 'high' ? 'active' : ''}" data-band="high">🟠 High</button>
+          <button class="filter-chip ${filterBand === 'moderate' ? 'active' : ''}" data-band="moderate">🟡 Moderate</button>
+          <button class="filter-chip ${filterBand === 'routine' ? 'active' : ''}" data-band="routine">🟢 Routine</button>
+          <button class="filter-chip ${filterBand === 'overdue' ? 'active' : ''}" data-band="overdue">🚨 Overdue</button>
         </div>
 
         <div class="data-table-container">
@@ -180,55 +234,62 @@ export function renderDoctorDashboard(doctorScheduleData, currentDoctorName) {
                 <th>Patient Details</th>
                 <th>Reason for Visit</th>
                 <th>Priority Band</th>
-                <th>Wait & Countdown</th>
+                <th>Wait & Threshold</th>
                 <th>Est. Duration</th>
                 <th>Status</th>
                 <th style="text-align: right;">Action</th>
               </tr>
             </thead>
             <tbody>
-              ${scheduledQueue.length > 0 ? scheduledQueue.map(p => `
-                <tr class="row-${p.band.id}">
-                  <td style="font-family:'JetBrains Mono',monospace; font-weight:700;">#${p.doctorQueuePosition}</td>
-                  <td>
-                    <div style="font-weight:700; color:var(--text-primary);">${p.name}</div>
-                    <div style="font-size:0.75rem; color:var(--text-muted); font-family:'JetBrains Mono',monospace;">${p.id} (${p.age || '—'})</div>
-                  </td>
-                  <td>
-                    <div style="font-weight:600; color:var(--text-primary);">${p.chief_complaint}</div>
-                    <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">
-                      ${p.plainLanguageWhy.split('\n')[0] || ''}
-                    </div>
-                  </td>
-                  <td>
-                    <span class="priority-badge band-${p.band.id}">
-                      ${p.band.icon} ${p.band.name}
-                    </span>
-                  </td>
-                  <td>
-                    <span class="wait-status-chip ${p.waitStatus?.badgeClass}">
-                      ${p.waitStatus?.badgeIcon} ${p.waitStatus?.badgeLabel}
-                    </span>
-                    <div style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">
-                      Waited: ${p.wait_time_minutes}m / Max ${p.band.maxWaitMinutes}m
-                    </div>
-                  </td>
-                  <td style="font-family:'JetBrains Mono',monospace;">~${p.estimated_duration} min</td>
-                  <td>
-                    <span style="font-size:0.75rem; text-transform:capitalize; background:#e2e8f0; padding:2px 8px; border-radius:9999px;">
-                      ${p.status}
-                    </span>
-                  </td>
-                  <td style="text-align: right;">
-                    <button class="btn btn-secondary btn-sm btn-call-seen" data-id="${p.id}">
-                      Mark Seen
-                    </button>
-                  </td>
-                </tr>
-              `).join('') : `
+              ${scheduledQueue.length > 0 ? scheduledQueue.map(p => {
+                const waitRatio = Math.min(100, Math.round(((Number(p.wait_time_minutes) || 0) / (p.band.maxWaitMinutes || 60)) * 100));
+                return `
+                  <tr class="row-${p.band.id} ${p.waitStatus?.isOverdue ? 'row-overdue-highlight' : ''}">
+                    <td style="font-family:'JetBrains Mono',monospace; font-weight:700;">#${p.doctorQueuePosition}</td>
+                    <td>
+                      <div style="font-weight:700; color:var(--text-primary);">${p.name}</div>
+                      <div style="font-size:0.75rem; color:var(--text-muted); font-family:'JetBrains Mono',monospace;">${p.id} (${p.age || '—'})</div>
+                    </td>
+                    <td>
+                      <div style="font-weight:600; color:var(--text-primary);">${p.chief_complaint}</div>
+                      <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">
+                        ${p.plainLanguageWhy.split('\n')[0] || ''}
+                      </div>
+                    </td>
+                    <td>
+                      <span class="priority-badge band-${p.band.id}">
+                        ${p.band.icon} ${p.band.name}
+                      </span>
+                    </td>
+                    <td>
+                      <span class="wait-status-chip ${p.waitStatus?.badgeClass}">
+                        ${p.waitStatus?.badgeIcon} ${p.waitStatus?.badgeLabel}
+                      </span>
+                      <!-- Visual Wait Time Progress Gauge -->
+                      <div class="wait-progress-bar-wrap" title="Elapsed: ${p.wait_time_minutes}m / Max safe: ${p.band.maxWaitMinutes}m (${waitRatio}%)">
+                        <div class="wait-progress-bar-fill ${p.waitStatus?.isOverdue ? 'fill-overdue' : (waitRatio >= 80 ? 'fill-near' : 'fill-safe')}" style="width: ${waitRatio}%;"></div>
+                      </div>
+                      <div style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">
+                        Waited: ${p.wait_time_minutes}m / Max ${p.band.maxWaitMinutes}m
+                      </div>
+                    </td>
+                    <td style="font-family:'JetBrains Mono',monospace;">~${p.estimated_duration} min</td>
+                    <td>
+                      <span style="font-size:0.75rem; text-transform:capitalize; background:var(--bg-subtle); padding:2px 8px; border-radius:9999px;">
+                        ${p.status}
+                      </span>
+                    </td>
+                    <td style="text-align: right;">
+                      <button class="btn btn-secondary btn-sm btn-call-seen" data-id="${p.id}">
+                        Mark Seen
+                      </button>
+                    </td>
+                  </tr>
+                `;
+              }).join('') : `
                 <tr>
                   <td colspan="8" style="text-align:center; padding:30px; color:var(--text-muted);">
-                    No patients currently assigned to ${doctorName}.
+                    ${filterQuery || filterBand !== 'all' ? 'No patients matching your search criteria.' : `No patients currently assigned to ${doctorName}.`}
                   </td>
                 </tr>
               `}

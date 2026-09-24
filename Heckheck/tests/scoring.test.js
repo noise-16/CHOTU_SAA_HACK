@@ -48,12 +48,12 @@ export function runAllTests() {
     );
   }
 
-  // Test 3: Exact scale verification across Moderate (45-69) and Routine (20-44)
+  // Test 3: Exact scale verification across Routine band (20-44)
   {
     const routinePatient = {
       id: 'T-3',
-      chief_complaint: 'Twisted ankle, mild soreness',
-      symptom_severity: 'mild', // +5
+      chief_complaint: 'Twisted ankle, mild swelling',
+      symptom_severity: 'moderate', // +20
       onset: 'gradual',
       symptoms_worsening: false,
       vitals: { spo2: 99, systolic_bp: 120, heart_rate: 76, pain_score: 3 },
@@ -61,7 +61,7 @@ export function runAllTests() {
     };
     const scored = scoreCase(routinePatient);
     assert(
-      'Mild case with normal vitals lands in Routine band (20-44)',
+      'Moderate case with normal vitals lands in Routine band (20-44)',
       scored.score >= 20 && scored.score <= 44 && scored.band.id === 'routine',
       `Score: ${scored.score}, Band: ${scored.band.name}`
     );

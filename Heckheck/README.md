@@ -109,17 +109,105 @@ Clinical severity is the **primary driver of queue order**, while **waiting-time
 
 ---
 
-## 6. How to Run Locally
+## 6. Backend Architecture & Database Persistence
 
-The app is 100% client-side with zero npm or database dependencies:
+CareWell Hospital ClearQueue includes a **FastAPI + SQLite (SQLAlchemy)** backend providing full data persistence across page reloads and server restarts.
 
+### 🛠️ Technology Stack
+- **Framework:** FastAPI (`>=0.110.0`)
+- **Server:** Uvicorn with standard ASGI tools (`>=0.29.0`)
+- **ORM & Database:** SQLAlchemy (`>=2.0.0`) with embedded SQLite (`clearqueue.db`)
+- **Validation:** Pydantic v2 schemas
+- **Testing:** Pytest & HTTPX test suite
+
+### 📡 API Endpoints Summary
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/health` | System health check and database statistics |
+| `GET` | `/api/patients` | Retrieve all triage patient records (filter by `status`, `doctor`) |
+| `POST` | `/api/patients` | Register/intake a new patient |
+| `PUT` | `/api/patients/{id}` | Update clinical parameters (enforces mandatory $\ge 10$ char justification §12) |
+| `POST` | `/api/patients/{id}/seen` | Mark consultation completed with mandatory clinical reason (§2) |
+| `POST` | `/api/patients/{id}/reassess` | Overdue reassessment action and justification (§14) |
+| `POST` | `/api/patients/advance-wait` | Advance queue wait times by $N$ minutes |
+| `POST` | `/api/patients/reset` | Reset database to initial demonstrator seed dataset |
+| `GET` | `/api/rooms` | Retrieve all clinical rooms and observation bays |
+| `POST` | `/api/rooms/{id}/allocate` | Admit and allocate a waiting patient to a room |
+| `POST` | `/api/rooms/{id}/vacate` | Vacate room and optionally mark patient seen |
+| `POST` | `/api/rooms/transfer` | Transfer patient directly between clinical rooms |
+
+Interactive OpenAPI / Swagger documentation is available at:  
+👉 **[http://localhost:8000/docs](http://localhost:8000/docs)**
+
+---
+
+## 7. How to Run Locally
+
+### Option A: Unified Full-Stack Server (FastAPI + Web Portal)
 ```bash
 # Double-click the one-click launcher:
 start_app.bat
 
-# Or run via native PowerShell:
+# Or run directly via Python:
+python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
+```
+Open **[http://localhost:8000/](http://localhost:8000/)** in your browser.
+
+### Option B: Run Backend & Frontend Separately
+```bash
+# Terminal 1: Launch FastAPI Backend
+start_backend.bat
+
+# Terminal 2: Launch Frontend Server
 powershell -ExecutionPolicy Bypass -File serve.ps1
 ```
+The frontend at `http://localhost:3000/` automatically detects and syncs with the FastAPI backend on `http://localhost:8000/`.
 
-Access in your browser at:  
-**[http://localhost:3000/](http://localhost:3000/)**
+---
+
+## 8. Database Inspection & Management
+
+The clinical database is stored locally at `backend/clearqueue.db`. You can view or reset the database anytime:
+
+### CLI Database Inspector
+```bash
+# Print formatted tables of all active patients, rooms, and audit logs:
+view_database.bat
+
+# Or run directly with Python:
+python backend/inspect_db.py
+```
+
+### Resetting to Clean Seed Data
+- In the browser: Click the **"🔄 Reset Data"** button in the top navigation bar.
+- Via API: `POST http://localhost:8000/api/patients/reset`
+
+---
+
+## 9. 3D Visualizations & Clinician UX Features
+
+- **3D Bio-Nexus (Landing Page):** Interactive 3D double helix with orbiting clinical satellite nodes (`Cardiac`, `Pulmonary`, `Triage`, `Genomics`) and interactive toolbar (`⚡ Energy Pulse`, `✨ Particle Burst`, `🔄 Reset View`).
+- **3D Patient Bio-Hologram (Doctor Dashboard):** Real-time pulsing 3D bio-monitor embedded in the "Who Should I See Next?" card, color-coded and pulse-synchronized to the patient's triage severity.
+- **Queue Search & Multi-Tier Filter Chips:** Instant search bar (hotkey `/`) and filter chips (`All`, `🔴 Critical`, `🟠 High`, `🟡 Moderate`, `🟢 Routine`, `🚨 Overdue`) with dynamic counts.
+- **Keyboard Shortcuts:** Press `?` or click `⌨️ Keys` in the top nav to view:
+  - `1-4`: Instant dashboard tab switching
+  - `/`: Focus queue search bar
+  - `N`: Register new patient
+  - `S`: Simulate arrival
+  - `Esc`: Dismiss modals
+
+---
+
+## 10. Automated Testing
+```bash
+# Run backend pytest suite (10 automated API tests):
+python -m pytest backend/tests/test_api.py -v
+
+# Run frontend core logic validator:
+node tests/validate.mjs
+
+# Run deterministic scoring & escalation tests (7 unit tests):
+node -e "import('./tests/scoring.test.js').then(m => console.log(m.runAllTests()))"
+```
+
