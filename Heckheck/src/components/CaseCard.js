@@ -69,7 +69,7 @@ export function renderCaseCard(patient, isExpanded = false) {
             ${band.id === 'needs_assessment' ? '?' : score}
           </span>
           <span class="score-label" style="color: ${band.color};">
-            ${band.shortLabel}
+            ${band.name || 'Score'}
           </span>
         </div>
       </div>
