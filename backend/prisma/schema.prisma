@@ -1,0 +1,112 @@
+// SQLite Prisma Schema for instant zero-dependency local testing
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      String   @default("PATIENT") // PATIENT, NURSE, DOCTOR, ADMIN
+  room      String?
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  assignedPatients      Patient[]             @relation("DoctorAssignedPatients")
+  consultationSummaries ConsultationSummary[]
+  auditLogs             AuditLog[]
+}
+
+model Patient {
+  id                String        @id @default(uuid())
+  ticketNumber      String        @unique
+  name              String
+  age               Int
+  gender            String?
+  phone             String?
+  chiefComplaint    String
+  reportedSymptoms  String
+  symptomSeverity   String        @default("mild")
+  onset             String        @default("gradual")
+  symptomsWorsening Boolean       @default(false)
+  duration          String?
+
+  // Vitals
+  heartRate         Int?
+  systolicBp        Int?
+  diastolicBp       Int?
+  spo2              Int?
+  temperatureC      Float?
+  painScore         Int?          @default(0)
+  vitalsConfidence  String        @default("measured")
+
+  // ML Triage & Priority
+  acuityScore       Int           @default(20)
+  priorityBand      String        @default("ROUTINE")
+  triageReasoning   String?
+  anomalyFlag       String?
+  anomalySuggested  String?
+
+  // Queue & Room
+  status            String        @default("WAITING")
+  waitTimeMinutes   Int           @default(0)
+  assignedDoctorId  String?
+  assignedDoctor    User?         @relation("DoctorAssignedPatients", fields: [assignedDoctorId], references: [id])
+  room              String?
+
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  auditLogs             AuditLog[]
+  consultationSummary   ConsultationSummary?
+  notifications         Notification[]
+}
+
+model AuditLog {
+  id            String   @id @default(uuid())
+  patientId     String
+  patient       Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  userId        String?
+  user          User?    @relation(fields: [userId], references: [id])
+  changedBy     String
+  role          String
+  action        String
+  fieldChanged  String?
+  oldValue      String?
+  newValue      String?
+  justification String
+  timestamp     DateTime @default(now())
+}
+
+model ConsultationSummary {
+  id                String   @id @default(uuid())
+  patientId         String   @unique
+  patient           Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctorId          String
+  doctor            User     @relation(fields: [doctorId], references: [id])
+  diagnosis         String
+  prescriptions     String
+  followUpTimeframe String
+  referrals         String?
+  notes             String?
+  completedAt       DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  patientId String
+  patient   Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  type      String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
